@@ -14,6 +14,7 @@ export const GET = withAuth(async (session) => {
     .select({
       id: schema.member.id,
       role: schema.member.role,
+      userId: schema.member.userId,
       createdAt: schema.member.createdAt,
       name: schema.user.name,
       email: schema.user.email,
@@ -27,6 +28,8 @@ export const GET = withAuth(async (session) => {
       role: m.role,
       name: m.name,
       email: m.email,
+      // 022 — la UI no ofrece restablecer la propia (eso va por el login).
+      isYou: m.userId === session.userId,
       createdAt: m.createdAt.toISOString(),
     })),
   });

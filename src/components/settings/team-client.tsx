@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { KeyRound, UserPlus } from "lucide-react";
 import { ContactAvatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,18 @@ type Member = {
   role: string;
   name: string;
   email: string;
+  isYou: boolean;
   createdAt: string;
 };
+
+/** Contraseña temporal legible: sin 0/O ni 1/l, que se confunden al dictarla. */
+function randomPassword(): string {
+  const alphabet =
+    "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint32Array(14);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
 
 export function TeamClient() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -38,14 +48,10 @@ export function TeamClient() {
   }, [refetch]);
 
   function generatePassword() {
-    const alphabet =
-      "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    const bytes = new Uint32Array(14);
-    crypto.getRandomValues(bytes);
-    setTempPassword(
-      Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("")
-    );
+    setTempPassword(randomPassword());
   }
+
+  const isOwner = members.some((m) => m.isYou && m.role === "owner");
 
   async function create() {
     setSaving(true);
@@ -156,9 +162,99 @@ export function TeamClient() {
             <Badge variant={m.role === "owner" ? "default" : "secondary"}>
               {m.role === "owner" ? "Propietario" : "Miembro"}
             </Badge>
+            {isOwner && !m.isYou && <ResetPassword member={m} />}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * 022 — Restablecer la contraseña de alguien del equipo (D2). Igual que el
+ * alta: el propietario comparte la temporal él mismo y se muestra UNA vez.
+ * Cambiarla cierra todas las sesiones de esa persona.
+ */
+function ResetPassword({ member }: { member: Member }) {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [done, setDone] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function start() {
+    setPassword(randomPassword());
+    setDone(null);
+    setError(null);
+    setOpen(true);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const res = await fetch(`/api/settings/team/${member.id}/password`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    }).catch(() => null);
+    setSaving(false);
+    if (!res?.ok) {
+      const data = (await res?.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+      setError(data?.error?.message ?? "No se pudo restablecer");
+      return;
+    }
+    setDone(password);
+    setOpen(false);
+  }
+
+  if (done) {
+    return (
+      <p className="max-w-[16rem] text-xs text-success-text" role="status">
+        Nueva contraseña (cópiala ahora): <code>{done}</code>
+      </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={start}
+        aria-label={`Restablecer la contraseña de ${member.name}`}
+      >
+        <KeyRound className="h-4 w-4" />
+        Restablecer
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex gap-2">
+        <Input
+          aria-label={`Contraseña temporal para ${member.name}`}
+          className="h-8 w-44"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Button
+          size="sm"
+          disabled={saving || password.length < 8}
+          onClick={() => void save()}
+        >
+          {saving ? "Guardando…" : "Guardar"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+          Cancelar
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Se cerrarán sus sesiones abiertas.
+      </p>
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

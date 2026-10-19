@@ -4,6 +4,7 @@ import type { ZodIssue } from "zod";
 import { getDb, PG_CONNECTION_OPTIONS, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { envSchema, safeParseEnv, type Env } from "@/lib/env";
+import { MIN_RECOVERY_KEY_LENGTH, recoveryKeyState } from "@/server/auth/recovery";
 import { leerConfigDespacho } from "@/server/brains/config";
 import { GENERATED_SECRETS, PLACEHOLDER_PREFIX } from "@/server/doctor/init-env";
 import { probeMediaDir } from "@/server/media-dir";
@@ -566,6 +567,40 @@ export function checkDispatch(
     status: "skip",
     label,
     detail: "no definida: contesta el agente incluido, o un cerebro que reciba el webhook por su cuenta",
+  };
+}
+
+/* ---------- Llave de recuperación (opcional) ---------- */
+
+/**
+ * 022 — `RECOVERY_KEY` corta no tumba nada: la recuperación con llave queda
+ * apagada. Es un aviso, porque es justo lo que alguien busca cuando «el
+ * formulario de la llave no aparece». Jamás se imprime la llave.
+ */
+export function checkRecoveryKey(
+  source: Record<string, string | undefined>
+): CheckResult {
+  const label = "RECOVERY_KEY";
+  const state = recoveryKeyState(source.RECOVERY_KEY);
+  if (state === "ok") {
+    return {
+      status: "ok",
+      label,
+      detail: "definida: «¿Olvidaste tu contraseña?» acepta la llave de recuperación",
+    };
+  }
+  if (state === "too_short") {
+    return {
+      status: "warn",
+      label,
+      detail: `tiene menos de ${MIN_RECOVERY_KEY_LENGTH} caracteres: la recuperación con llave queda APAGADA`,
+      fix: "en .env: RECOVERY_KEY=$(openssl rand -base64 32)",
+    };
+  }
+  return {
+    status: "skip",
+    label,
+    detail: "no definida: si pierdes la contraseña, queda scripts/reset-password.mjs",
   };
 }
 

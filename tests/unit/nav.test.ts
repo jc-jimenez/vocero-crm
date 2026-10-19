@@ -96,6 +96,11 @@ describe("ajustes en tres secciones", () => {
       Agente: ["IA"],
       Negocio: ["Marca", "Plantillas", "Equipo", "Anuncios"],
     });
+    expect(links(settingsSections({ correo: true }))).toEqual({
+      Canales: ["WhatsApp"],
+      Agente: ["IA"],
+      Negocio: ["Marca", "Plantillas", "Equipo", "Correo"],
+    });
   });
 
   it("con todo encendido, cada pantalla de Ajustes tiene exactamente un enlace", () => {

@@ -16,6 +16,7 @@ import { getSql } from "@/lib/db";
 import {
   checkAi,
   checkDispatch,
+  checkRecoveryKey,
   checkDatabase,
   checkMediaDir,
   checkWhatsApp,
@@ -82,6 +83,7 @@ if (!env) {
   }
   section("IA (opcional)", [checkAi(env)]);
   section("Cerebro externo (opcional)", [checkDispatch(process.env)]);
+  section("Recuperar la contraseña (opcional)", [checkRecoveryKey(process.env)]);
 }
 
 const s = summarize(all);

@@ -1,10 +1,12 @@
 /**
  * Restablecer la contraseña de un usuario SIN correo.
  *
- * Vocero no tiene flujo de "olvidé mi contraseña" —sería una dependencia
- * externa, y la constitución las prohíbe en v1— y el registro público se cierra
- * en cuanto existe la primera organización. Cuando la contraseña se pierde, la
- * única salida es reescribir el hash en la base.
+ * Desde 022, «¿Olvidaste tu contraseña?» resuelve casi todos los casos: la
+ * llave de recuperación (`RECOVERY_KEY`), el enlace por correo (conector
+ * opcional `CORREO`) y el propietario restableciendo la de su equipo. Este
+ * script queda para cuando ninguno está a la mano: sin llave puesta, sin
+ * correo conectado y con el propietario fuera de su cuenta. Entonces la única
+ * salida es reescribir el hash en la base.
  *
  * Este script NO toca ninguna base de datos: no abre conexión, no lee
  * DATABASE_URL, no escribe nada. Genera el hash y te imprime el `UPDATE` listo
