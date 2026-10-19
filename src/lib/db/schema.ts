@@ -885,6 +885,33 @@ export const googleCredentials = pgTable(
   (t) => [uniqueIndex("google_credentials_org_uq").on(t.organizationId)]
 );
 
+/**
+ * 022 — Credenciales del conector de correo (el enlace de «olvidé mi
+ * contraseña»), de la cuenta del propio negocio en el proveedor. La llave va
+ * cifrada como el token de WhatsApp; el remitente no es secreto.
+ */
+export const mailCredentials = pgTable(
+  "mail_credentials",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: ["resend"] }).notNull().default("resend"),
+    fromAddress: text("from_address").notNull(),
+    keyCipher: text("key_cipher").notNull(),
+    keyIv: text("key_iv").notNull(),
+    keyTag: text("key_tag").notNull(),
+    /** `error` SE ESCRIBE cuando el proveedor rechaza un envío real. */
+    status: text("status", { enum: ["connected", "error"] })
+      .notNull()
+      .default("connected"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("mail_credentials_org_uq").on(t.organizationId)]
+);
+
 export const agentTestCase = pgTable(
   "agent_test_case",
   {

@@ -11,6 +11,9 @@ import {
   resolveActiveOrganizationId,
 } from "@/server/auth/on-signup";
 import { isPublicSignupAllowed } from "@/server/auth/registration";
+import { correoEnabled } from "@/server/mail/flag";
+import { RESET_LINK_MINUTES } from "@/server/mail/messages";
+import { sendResetPasswordEmail } from "@/server/mail/service";
 
 /**
  * Contexto interno del proceso: permite que el alta de cuentas de equipo
@@ -38,7 +41,13 @@ function isInternalSignup(): boolean {
   return internalSignupContext().getStore() === true;
 }
 
-const RATE_LIMITED_PATHS = new Set(["/sign-in/email", "/sign-up/email"]);
+const RATE_LIMITED_PATHS = new Set([
+  "/sign-in/email",
+  "/sign-up/email",
+  // 022 — el enlace por correo, con la misma tasa que el login (D10).
+  "/request-password-reset",
+  "/reset-password",
+]);
 
 function createAuth() {
   const env = getEnv();
@@ -61,6 +70,17 @@ function createAuth() {
       enabled: true,
       requireEmailVerification: false,
       minPasswordLength: 8,
+      // 022 — «olvidé mi contraseña» por correo (conector opcional, D4/D7).
+      // Apagado, la petición no llega aquí: el hook de abajo la corta con 404.
+      // Sin `await` a propósito: esperar al proveedor haría que la respuesta
+      // tardara más cuando el correo SÍ tiene cuenta (D9), y un proveedor
+      // lento colgaría el formulario (D8). La función nunca lanza.
+      sendResetPassword: async ({ user, url }) => {
+        void sendResetPasswordEmail({ userId: user.id, email: user.email, url });
+      },
+      resetPasswordTokenExpiresIn: RESET_LINK_MINUTES * 60,
+      // D3: cambiar la contraseña cierra todas las sesiones de ese usuario.
+      revokeSessionsOnPasswordReset: true,
     },
     plugins: [organization({ creatorRole: "owner" })],
     hooks: {
@@ -74,6 +94,10 @@ function createAuth() {
               message: "Demasiados intentos; espera unos minutos",
             });
           }
+        }
+        // 022 — sin la bandera CORREO, pedir el enlace por correo no existe.
+        if (ctx.path === "/request-password-reset" && !correoEnabled()) {
+          throw new APIError("NOT_FOUND", { message: "Not found" });
         }
         // Registro público cerrado tras la primera organización (FR-060).
         if (ctx.path === "/sign-up/email") {

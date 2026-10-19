@@ -38,6 +38,16 @@ export const envSchema = z.object({
   // conversacion, no se le reporta nada a Meta y la superficie da 404.
   // Ej.: ATRIBUCION=on
   ATRIBUCION: z.string().optional(),
+  // 022: conector de correo (enlace de «olvidé mi contraseña»). Apagado por
+  // defecto — sin el, Ajustes no muestra «Correo» y su superficie da 404.
+  // Ej.: CORREO=on
+  CORREO: z.string().optional(),
+  // 022: llave de recuperación, el camino sin correo. Sin ella, recuperar con
+  // llave responde 404. No se valida su largo aquí, por lo mismo que
+  // BRAIN_HEALTH_URL: corta, queda inactiva y `pnpm doctor` lo avisa
+  // (server/auth/recovery.ts), en vez de tumbar el CRM entero.
+  RECOVERY_KEY: z.string().optional(),
+  RESEND_BASE_URL: z.string().url().default("https://api.resend.com"),
   // 015: bases de los conectores. Solo se sobreescriben para apuntar a los
   // mocks en el self-test; en producción se usan las reales.
   ZOOM_BASE_URL: z.string().url().default("https://api.zoom.us/v2"),

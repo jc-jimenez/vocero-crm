@@ -103,12 +103,15 @@ export function settingsSections({
   agenda = false,
   atribucion = false,
   messenger = false,
+  correo = false,
 }: {
   agenda?: boolean;
   /** 016 — "Anuncios" existe solo con la bandera ATRIBUCION. */
   atribucion?: boolean;
   /** 017 — "Messenger" solo si el canal está encendido con CHANNELS. */
   messenger?: boolean;
+  /** 022 — "Correo" solo con la bandera CORREO. */
+  correo?: boolean;
 }): SettingsSection[] {
   const canales: SettingsLink[] = [{ href: "/settings/whatsapp", label: "WhatsApp" }];
   if (messenger) canales.push({ href: "/settings/messenger", label: "Messenger" });
@@ -123,6 +126,7 @@ export function settingsSections({
     { href: "/settings/team", label: "Equipo" },
   ];
   if (atribucion) negocio.push({ href: "/settings/ads", label: "Anuncios" });
+  if (correo) negocio.push({ href: "/settings/email", label: "Correo" });
 
   return [
     { title: "Canales", links: canales },

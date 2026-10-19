@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth/client";
@@ -15,6 +15,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 022 — vuelta de «¿Olvidaste tu contraseña?». Se lee en el efecto y no con
+  // useSearchParams para no obligar a esta página a un límite de Suspense.
+  const [reset, setReset] = useState(false);
+  useEffect(() => {
+    setReset(new URLSearchParams(window.location.search).has("restablecida"));
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +49,14 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
+          {reset && (
+            <p
+              className="rounded-md border border-success-soft bg-success-tint p-3 text-sm text-success-text"
+              role="status"
+            >
+              Contraseña cambiada. Entra con la nueva.
+            </p>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="email">Correo</Label>
             <Input
@@ -55,7 +69,16 @@ export default function LoginPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password">Contraseña</Label>
+            <div className="flex items-baseline justify-between gap-2">
+              <Label htmlFor="password">Contraseña</Label>
+              {/* 022 */}
+              <Link
+                href="/forgot-password"
+                className="text-xs text-primary hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
